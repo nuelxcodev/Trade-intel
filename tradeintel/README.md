@@ -39,3 +39,12 @@ A model that shows no net edge on the test window sets `usable=False` and never 
 `opportunity` (hard quality gates, explainable 0-100 score with hand-set weights), `scanner`
 (per-pair scan from the latest closed candle, cached per candle, explicit "no qualified
 opportunities" result, one open signal per pair and direction).
+
+## Performance and notifications
+
+`performance` (net R per closed signal using the thirds exit model, win rate, profit factor,
+max drawdown in R, MFE/MAE from stored candles; breakdowns by pair, timeframe, direction, pattern,
+model; no-entry and open signals reported separately). `notify` (messages rendered from the stored
+signal, in-app / Telegram / email channels, per-user score/timeframe/probability thresholds,
+retry with backoff, one delivery per signal, user and channel). Secrets come from
+TELEGRAM_BOT_TOKEN and SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD/SMTP_FROM.
