@@ -48,3 +48,32 @@ model; no-entry and open signals reported separately). `notify` (messages render
 signal, in-app / Telegram / email channels, per-user score/timeframe/probability thresholds,
 retry with backoff, one delivery per signal, user and channel). Secrets come from
 TELEGRAM_BOT_TOKEN and SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD/SMTP_FROM.
+
+## Running as a service (Railway or any host)
+
+    python -m tradeintel.main        # starts the background worker and the API on $PORT
+
+The Procfile, `railway.json` (start command and `/health` check) and a root `main.py` all point at it.
+One process runs both the worker and the API because they share one SQLite file.
+
+**Persistence.** The container disk is wiped on every deploy. Attach a volume (for example at `/data`)
+and set `TI_DB_PATH=/data/tradeintel.db`; models are saved next to it unless `TI_MODEL_DIR` is set.
+Without a volume, candles, signals and models are lost on each redeploy.
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `PORT` | HTTP port (set by the host) | 8000 |
+| `TI_API_KEY` | Required as `X-API-Key` on every `/api` route; enables `POST /api/prefs/<user>` | unset: reads open, writes off |
+| `TI_DB_PATH`, `TI_MODEL_DIR` | storage locations | `tradeintel.db`, `<db dir>/models` |
+| `TI_SYMBOLS` | pairs to monitor, comma separated | 8 large USDT pairs |
+| `TI_TIMEFRAMES` | timeframes, from 1m, 5m, 15m, 30m, 1h, 4h, 1d | `1h` |
+| `TI_HISTORY_DAYS`, `TI_CYCLE_SECONDS` | history kept, pause between cycles | 365, 300 |
+| `TI_BINANCE_URL` | market-data host; change it if sync logs HTTP 451 or 403 (region block) | `https://data-api.binance.vision` |
+| `TI_CAPITAL`, `TI_RISK_PER_TRADE`, `TI_MIN_SCORE`, `TI_MIN_RR`, `TI_MIN_QUOTE_VOLUME` | trading thresholds | 10000, 0.01, 60, 1.8, 5000000 |
+| `TELEGRAM_BOT_TOKEN`, `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASSWORD` `SMTP_FROM` | enable Telegram and email delivery | unset |
+| `TI_CORS_ORIGIN` | allowed dashboard origin | `*` |
+
+First boot downloads history, trains a model per pair (needs 1,500 candles), then scans. Expect
+"No qualified trading opportunities" until a model shows an edge on its untouched test window.
+Endpoints: `/health`, `/api/overview`, `/api/opportunities?tf=1h`, `/api/signals`, `/api/signals/<id>`,
+`/api/performance`, `/api/models`, `/api/notifications?user=default`, `POST /api/prefs/<user>`.

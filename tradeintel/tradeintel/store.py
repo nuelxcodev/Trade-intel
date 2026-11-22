@@ -41,7 +41,10 @@ CREATE TABLE IF NOT EXISTS sync_log (
 
 class CandleStore:
     def __init__(self, path: str = ":memory:"):
-        self.conn = sqlite3.connect(path)
+        # A generous busy timeout and WAL let the worker thread write while the API thread reads.
+        self.conn = sqlite3.connect(path, timeout=30)
+        if path != ":memory:":
+            self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(SCHEMA)
 
     def close(self) -> None:

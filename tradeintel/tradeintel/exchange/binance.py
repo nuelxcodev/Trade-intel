@@ -11,7 +11,9 @@ from .base import Candle, Exchange
 
 log = logging.getLogger(__name__)
 
-BASE_URL = "https://api.binance.com"
+# Binance's market-data-only host. It serves klines, exchangeInfo and time, which is all this
+# platform needs, and is reachable from more cloud regions than api.binance.com.
+BASE_URL = "https://data-api.binance.vision"
 
 
 class BinanceError(RuntimeError):
@@ -45,7 +47,9 @@ class BinanceSpot(Exchange):
                 elif resp.status_code >= 500:
                     log.warning("Binance server error %s, attempt %d", resp.status_code, attempt)
                 else:
-                    raise BinanceError(f"{resp.status_code}: {resp.text[:200]}")
+                    hint = (" (this server's region is blocked by the exchange; set TI_BINANCE_URL to another "
+                            "market-data endpoint or deploy in another region)" if resp.status_code in (403, 451) else "")
+                    raise BinanceError(f"{resp.status_code}: {resp.text[:200]}{hint}")
             if attempt < self.max_retries:
                 time.sleep(delay)
                 delay = min(delay * 2, 60.0)
