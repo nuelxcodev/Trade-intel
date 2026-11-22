@@ -78,13 +78,19 @@ First boot downloads history, trains a model per pair (needs 1,500 candles), the
 Endpoints: `/health`, `/api/overview`, `/api/opportunities?tf=1h`, `/api/signals`, `/api/signals/<id>`,
 `/api/performance`, `/api/models`, `/api/notifications?user=default`, `POST /api/prefs/<user>`.
 
-## Dashboard
+## Dashboard (mobile app)
 
-The service serves the dashboard at `/` (file: `tradeintel/web/index.html`, no build step). It reads the
-live API, refreshes every 30 seconds, and asks for the access key if `TI_API_KEY` is set. It shows market
-breadth and regime, ranked opportunities (or the explicit "none" message with the reason each pair was
-rejected), an interactive-free candlestick chart with EMAs and entry, stop loss and take profit levels,
-the trade plan, signal history with net R results, pattern performance, model status, and
-evidence-based explanations. Banners surface sync failures (for example a region block) and models
-still waiting for history. Explanations are generated from the engines' stored evidence, not by a
-language model.
+The service serves a phone-first app at `/` (file: `tradeintel/web/index.html`, no build step), laid out
+like a trading terminal (MetaTrader 5 / Exness) with plain-language wording. Five bottom tabs:
+
+- **Signals**: new setups as cards (Buy/Sell, strength ring, entry, stop loss, target 1, reward vs risk,
+  chance), or the explicit "no qualified setups" message with why each pair was skipped; open trades.
+- **Markets**: quote list with sparkline, price and 24h change.
+- **Chart**: candlesticks with EMAs, entry zone and levels, touch crosshair, trade ticket, "Why this
+  trade", "Copy levels".
+- **History**: win rate, profit factor, total R, filterable signal list, per-signal timeline, pattern stats.
+- **More**: model readiness, system status and banners (region block, missing history), alerts inbox, access key.
+
+A sun/moon button in the header switches between Light (white, red primary) and Dark (black, red primary); it follows the phone setting until you choose, then remembers your choice.
+
+It refreshes every 30 seconds and works on desktop too. Explanations come from stored evidence, not a language model.

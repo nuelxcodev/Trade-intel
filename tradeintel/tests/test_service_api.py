@@ -174,6 +174,8 @@ def test_market_summary(running):
     assert code == 200 and m["pairs"] == 1                                          # only AAAUSDT has candles
     assert 0 <= m["bullish_pct"] <= 100 and m["condition"] in ("Trending", "Range-bound")
     assert m["volatility"] in ("rising", "falling", "steady")
+    row = m["pairs_detail"][0]
+    assert row["symbol"] == "AAAUSDT" and row["price"] > 0 and len(row["spark"]) == 48 and row["spark"][-1] == row["price"]
     assert get(base + "/api/market?tf=4h")[1]["pairs"] == 0
 
 

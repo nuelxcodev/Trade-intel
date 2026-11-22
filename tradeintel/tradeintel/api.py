@@ -226,7 +226,8 @@ def market_summary(cfg: Config, store: CandleStore, tf: str) -> dict:
         r = df.iloc[-1]
         ratio = df["atr14"].iloc[-1] / df["atr14"].rolling(50).mean().shift(1).iloc[-1]
         back = max(1, int(86_400_000 // step))
-        rows.append({"symbol": sym, "bullish": bool(r.ema20 > r.ema50), "adx": float(r.adx14),
+        rows.append({"symbol": sym, "price": float(r.close), "spark": [float(x) for x in df["close"].tail(48)],
+                     "bullish": bool(r.ema20 > r.ema50), "adx": float(r.adx14),
                      "atr_ratio": float(ratio), "rsi": float(r.rsi14),
                      "change_24h": float(r.close / df["close"].iloc[-1 - back] - 1) if len(df) > back else None})
     if not rows:
