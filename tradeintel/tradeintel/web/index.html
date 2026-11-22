@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#000; --panel:#0A0A0B; --panel2:#050506; --line:#1D1D20;
+  --fg:#F5F2EA; --muted:#9A968C;
+  --up:#3DDC97; --down:#FF7A59; --accent:#D8B877; --warn:#E3C27A; --warn-bg:#1A150A; --bad:#FF7A59;
+  --chip:#17130A; --chip-fg:#E3C98F;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:#000}
+body{margin:0;background:#000 radial-gradient(900px 380px at 50% -120px,rgba(216,184,119,.10),transparent 70%) no-repeat;
+  color:var(--fg);font:14px/1.5 'Poppins',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;
+  padding:24px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:30px;font-weight:600;letter-spacing:-.025em}
+h2{font-size:17px;font-weight:500;letter-spacing:-.01em}
+.muted{color:var(--muted)} .small{font-size:12px}
+.label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;font-weight:500}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.top-l,.top-r{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;border:1px solid rgba(216,184,119,.45);color:var(--chip-fg);letter-spacing:.1em;background:transparent;white-space:nowrap}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:6px}
+.dot.ok{background:var(--up)} .dot.bad{background:var(--bad)} .dot.wait{background:var(--warn)}
+button{font:inherit;color:var(--fg);cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12px;min-height:34px}
+.btn:hover{border-color:rgba(216,184,119,.5)}
+select{background:#000;color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;min-height:34px}
+.panel,.kpi{border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,#0E0E10,#070708);box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 24px 48px -28px rgba(0,0,0,.9);min-width:0}
+.panel{padding:24px;display:flex;flex-direction:column;gap:16px}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.kpi{padding:20px;display:flex;flex-direction:column;gap:6px}
+.kpi .big{font-size:38px;font-weight:300;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .mid{font-size:19px;font-weight:400;line-height:1.3}
+.bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--line)}
+.banner{border:1px solid rgba(227,194,122,.35);background:var(--warn-bg);color:var(--warn);border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:4px}
+.banner.bad{border-color:rgba(255,122,89,.45);color:var(--bad);background:#1A0C08}
+.banner b{font-weight:600}
+.scroll{overflow-x:auto}
+.tbl{min-width:900px;display:flex;flex-direction:column;gap:6px}
+.cols{display:grid;grid-template-columns:1.3fr .6fr .9fr .9fr .9fr 1.9fr .8fr .5fr;gap:12px;align-items:center}
+.thead{padding:0 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+button.row{width:100%;text-align:left;padding:12px;min-height:52px;border-radius:14px;background:#060607;border:1px solid var(--line);font-size:14px;transition:border-color .2s,background .2s}
+button.row:hover{border-color:rgba(216,184,119,.4)}
+button.row[aria-pressed="true"]{background:linear-gradient(90deg,rgba(216,184,119,.12),rgba(216,184,119,.03));border-color:rgba(216,184,119,.7)}
+.score{font-size:24px;font-weight:300}
+.num{font-variant-numeric:tabular-nums}
+.long{color:var(--up)} .short{color:var(--down)}
+.split{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.split{grid-template-columns:minmax(0,1fr)}}
+svg.chart{width:100%;height:auto;display:block;border-radius:14px;background:#030304}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--muted)}
+.plan{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.plan b{display:block;font-weight:600;font-size:14px;line-height:1.4}
+.callout,.item{padding:12px 14px;border-radius:14px;background:#060607;border:1px solid var(--line);line-height:1.55}
+.tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid currentColor;letter-spacing:.08em;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}
+.stats b{display:block;font-size:26px;font-weight:300;letter-spacing:-.02em}
+.hist{min-width:700px;display:flex;flex-direction:column}
+.hcols{display:grid;grid-template-columns:1.2fr .7fr .5fr 1.4fr .6fr 1fr .8fr;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);align-items:center}
+.hhead{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+button.hrow{background:none;border:0;border-bottom:1px solid var(--line);width:100%;text-align:left;font-size:14px}
+button.hrow:hover{background:rgba(216,184,119,.05)}
+.meter{height:8px;border-radius:999px;background:#1A1A1D;overflow:hidden}
+.meter i{display:block;height:8px;border-radius:999px;background:linear-gradient(90deg,#B8975A,#EAD3A0)}
+.pat{display:flex;flex-direction:column;gap:6px}
+.pat .t{display:flex;justify-content:space-between;gap:8px}
+.block{display:flex;flex-direction:column;gap:4px}
+.block ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
+.empty{padding:28px 16px;text-align:center;border:1px dashed var(--line);border-radius:14px;display:flex;flex-direction:column;gap:8px}
+.empty strong{font-size:18px;font-weight:500}
+details summary{cursor:pointer;color:var(--muted);font-size:12px}
+details ul{margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+dialog{background:#0A0A0B;color:var(--fg);border:1px solid var(--line);border-radius:18px;padding:24px;max-width:420px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.7)}
+dialog form{display:flex;flex-direction:column;gap:14px}
+input[type=password]{background:#000;color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font:inherit}
+.mtbl{display:flex;flex-direction:column;gap:8px}
+.mrow{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:8px;font-size:13px;align-items:center}
+@media (prefers-reduced-motion:reduce){button.row{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="top">
+  <div class="top-l">
+    <h1>Trading Intelligence</h1>
+    <span class="pill">DECISION SUPPORT</span>
+    <span class="pill" id="exchangePill">…</span>
+  </div>
+  <div class="top-r">
+    <span class="small muted" id="workerStatus"><span class="dot wait"></span>Connecting…</span>
+    <label class="small muted" for="tfSelect">Timeframe</label>
+    <select id="tfSelect" aria-label="Timeframe"></select>
+    <button class="btn" id="keyBtn" type="button">Access key</button>
+  </div>
+</div>
+
+<div id="banners"></div>
+
+<div class="kpis">
+  <div class="kpi"><span class="label">Monitored pairs</span><span class="big num" id="kPairs">–</span><span class="muted small" id="kPairsNote">&nbsp;</span></div>
+  <div class="kpi"><span class="label">Market condition</span><span class="mid" id="kCond">–</span><span class="muted small" id="kCondNote">&nbsp;</span></div>
+  <div class="kpi"><span class="label">Market breadth</span>
+    <div class="bar" id="kBar" role="img" aria-label="Share of pairs in an uptrend"></div>
+    <div style="display:flex;justify-content:space-between"><span id="kBull">–</span><span id="kBear">–</span></div>
+    <span class="muted small">Pairs with EMA 20 above or below EMA 50</span></div>
+  <div class="kpi"><span class="label">Qualified opportunities</span><span class="big num" id="kOpps">–</span><span class="muted small" id="kOppsNote">&nbsp;</span></div>
+  <div class="kpi"><span class="label">Active signals</span><span class="big num" id="kSigs">–</span><span class="muted small" id="kSigsNote">&nbsp;</span></div>
+  <div class="kpi"><span class="label">Models with an edge</span><span class="big num" id="kModels">–</span><span class="muted small" id="kModelsNote">&nbsp;</span></div>
+</div>
+
+<section class="panel" aria-labelledby="oppT">
+  <div class="panel-head"><h2 id="oppT">Top trading opportunities</h2><span class="muted small" id="scanTime"></span></div>
+  <div id="oppBody"></div>
+</section>
+
+<div class="split" id="analysis" hidden>
+  <section class="panel" aria-labelledby="chT">
+    <div class="panel-head"><h2 id="chT"></h2><span class="muted small" id="chSub"></span></div>
+    <div id="chartHost"></div>
+    <div class="legend">
+      <span>Hollow candle = up, filled = down</span><span style="color:#F5F2EA">EMA 20</span><span style="color:#7C86FF">EMA 50</span>
+      <span style="color:var(--accent)">Gold = entry zone</span><span style="color:var(--up)">Green = take profit</span><span style="color:var(--down)">Orange = stop loss</span>
+    </div>
+  </section>
+  <section class="panel" aria-labelledby="plT">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px"><h2 id="plT">Trade plan</h2><span class="tag" id="plDir"></span><span class="tag" id="plStatus" style="color:var(--chip-fg)"></span></div>
+    <div class="callout" id="plAction"></div>
+    <div class="plan" id="plGrid"></div>
+    <div class="muted small" id="plNote"></div>
+  </section>
+</div>
+
+<div class="split">
+  <section class="panel" aria-labelledby="hT">
+    <h2 id="hT">Signal history and performance</h2>
+    <div class="stats" id="stats"></div>
+    <div class="scroll"><div class="hist" id="hist"></div></div>
+    <div class="muted small">Original levels are never edited. Later changes are recorded as status updates.</div>
+  </section>
+  <section class="panel" aria-labelledby="pT">
+    <h2 id="pT">Pattern performance</h2>
+    <div id="patterns" style="display:flex;flex-direction:column;gap:14px"></div>
+  </section>
+</div>
+
+<div class="split">
+  <section class="panel" id="insight" aria-labelledby="iT" hidden>
+    <h2 id="iT"></h2>
+    <div id="insightBody" style="display:flex;flex-direction:column;gap:16px"></div>
+    <div class="muted small">Written from the engines' structured outputs. No language model is involved and nothing here is invented.</div>
+  </section>
+  <section class="panel" aria-labelledby="mT">
+    <h2 id="mT">Model status</h2>
+    <div class="muted small">A model may only produce signals if it beat its base rate on a window it never trained on.</div>
+    <div class="mtbl" id="models"></div>
+  </section>
+</div>
+
+<div class="muted small" style="text-align:center">Decision support only, not financial advice. Probabilities are calibrated estimates from past data and are not guaranteed outcomes.</div>
+</div>
+
+<dialog id="keyDlg">
+  <form method="dialog" id="keyForm">
+    <h2>Access key</h2>
+    <p class="muted small" style="margin:0">This server requires its API key. It is kept in this browser only.</p>
+    <label class="label" for="keyInput">Key</label>
+    <input type="password" id="keyInput" autocomplete="off">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" type="button" id="keyCancel">Cancel</button>
+      <button class="btn" type="submit" style="border-color:rgba(216,184,119,.6)">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var KEY_NAME = 'ti_key', REFRESH_MS = 30000;
+  var state = {tf:null, overview:null, selected:null, tfs:[]};
+
+  function getKey(){ try { return localStorage.getItem(KEY_NAME) || ''; } catch(e){ return ''; } }
+  function setKey(k){ try { k ? localStorage.setItem(KEY_NAME,k) : localStorage.removeItem(KEY_NAME); } catch(e){} }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function fmt(x, forceDp){
+    if (x == null || !isFinite(x)) return '–';
+    var a = Math.abs(x), dp = forceDp != null ? forceDp : a >= 1000 ? 2 : a >= 10 ? 3 : a >= 1 ? 4 : 6;
+    return Number(x).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:dp});
+  }
+  function pct(x, dp){ return x == null || !isFinite(x) ? '–' : (x*100).toFixed(dp == null ? 0 : dp) + '%'; }
+  function ago(sec){ if (sec == null) return 'never'; if (sec < 90) return sec + 's ago'; if (sec < 5400) return Math.round(sec/60) + ' min ago'; return Math.round(sec/3600) + ' h ago'; }
+  function when(epochSec){ return new Date(epochSec*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+
+  async function api(path){
+    var headers = {}, k = getKey();
+    if (k) headers['X-API-Key'] = k;
+    var r = await fetch(path, {headers: headers});
+    if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; }
+    if (!r.ok) throw new Error(path + ' returned ' + r.status);
+    return r.json();
+  }
+
+  /* ---------- chart ---------- */
+  function drawChart(candles, p){
+    if (!candles.length) return '<div class="empty"><span class="muted">No candles stored for this pair yet.</span></div>';
+    var W = 800, H = 340, T = 16, B = 324, plotW = 640, n = candles.length, step = plotW / n;
+    var levelPrices = [p.entry, p.sl, p.tp1, p.tp2, p.tp3, p.entry_lo, p.entry_hi].filter(function(v){ return v != null; });
+    var lo = Math.min.apply(null, candles.map(function(c){ return c.l; }).concat(levelPrices));
+    var hi = Math.max.apply(null, candles.map(function(c){ return c.h; }).concat(levelPrices));
+    var pad = (hi - lo) * .06 || 1; lo -= pad; hi += pad;
+    var y = function(v){ return B - ((v - lo)/(hi - lo))*(B - T); };
+    var R = function(v){ return Math.round(v*10)/10; };
+    var clampT = function(v){ return Math.min(334, Math.max(12, v)); };
+    var s = '';
+    [0.2,.4,.6,.8].forEach(function(t){ var gy = R(T+(B-T)*t); s += '<line x1="0" x2="'+W+'" y1="'+gy+'" y2="'+gy+'" stroke="#1D1D20"/>'; });
+    var yE = y(p.entry), yS = y(p.sl), yT = y(p.tp3);
+    s += '<rect x="'+plotW+'" y="'+R(Math.min(yE,yT))+'" width="'+(W-plotW)+'" height="'+R(Math.abs(yE-yT))+'" fill="#3DDC97" fill-opacity=".10"/>';
+    s += '<rect x="'+plotW+'" y="'+R(Math.min(yE,yS))+'" width="'+(W-plotW)+'" height="'+R(Math.abs(yE-yS))+'" fill="#FF7A59" fill-opacity=".14"/>';
+    if (p.entry_lo != null) s += '<rect x="0" y="'+R(Math.min(y(p.entry_lo),y(p.entry_hi)))+'" width="'+plotW+'" height="'+Math.max(1,R(Math.abs(y(p.entry_lo)-y(p.entry_hi))))+'" fill="#D8B877" fill-opacity=".10"/>';
+    s += '<line x1="'+plotW+'" x2="'+plotW+'" y1="0" y2="'+H+'" stroke="#1D1D20" stroke-dasharray="2 4"/>';
+    candles.forEach(function(c, i){
+      var x = step*i + step/2, up = c.c >= c.o, col = up ? '#3DDC97' : '#FF7A59', top = y(Math.max(c.o,c.c)), hh = Math.max(1.5, Math.abs(y(c.o)-y(c.c))), bw = Math.max(1.5, step*.62);
+      s += '<line x1="'+R(x)+'" x2="'+R(x)+'" y1="'+R(y(c.h))+'" y2="'+R(y(c.l))+'" stroke="'+col+'" stroke-width="1.2"/>';
+      s += '<rect x="'+R(x-bw/2)+'" y="'+R(top)+'" width="'+R(bw)+'" height="'+R(hh)+'" fill="'+(up?'#030304':col)+'" stroke="'+col+'" stroke-width="1.2"/>';
+    });
+    function line(key, color){
+      var pts = candles.map(function(c,i){ return c[key] == null ? null : R(step*i+step/2)+','+R(y(c[key])); }).filter(Boolean);
+      return pts.length > 1 ? '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="1.4" stroke-opacity=".9"/>' : '';
+    }
+    s += line('ema20','#F5F2EA') + line('ema50','#7C86FF');
+    [[p.sl,'SL','#FF7A59','6 4'],[p.entry,'Entry','#D8B877','0'],[p.tp1,'TP1','#3DDC97','6 4'],[p.tp2,'TP2','#3DDC97','6 4'],[p.tp3,'TP3','#3DDC97','6 4']].forEach(function(l){
+      var ly = y(l[0]);
+      s += '<line x1="560" x2="'+W+'" y1="'+R(ly)+'" y2="'+R(ly)+'" stroke="'+l[2]+'" stroke-width="1.5" stroke-dasharray="'+l[3]+'"/>';
+      s += '<text x="646" y="'+R(clampT(ly-5))+'" font-size="12" font-weight="600" fill="'+l[2]+'">'+l[1]+' '+esc(fmt(l[0]))+'</text>';
+    });
+    return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(p.symbol)+' '+esc(p.tf)+' candlestick chart with entry, stop loss and take profit levels">'+s+'</svg>';
+  }
+
+  /* ---------- normalising an opportunity or stored signal into one plan ---------- */
+  function planFromOpp(o){ return o; }
+  function planFromSignal(s){
+    var pl = s.payload || {};
+    return Object.assign({}, s, {components: pl.components || {}, invalidation: pl.invalidation || [], evidence: pl.evidence || {},
+      threshold: pl.threshold, status: s.state && s.state.status});
+  }
+
+  async function showPlan(p){
+    $('analysis').hidden = false;
+    $('chT').textContent = 'Market analysis: ' + p.symbol + ' · ' + p.tf;
+    $('chSub').textContent = (p.evidence && p.evidence.patterns_now && Object.keys(p.evidence.patterns_now).length)
+      ? 'Patterns now: ' + Object.keys(p.evidence.patterns_now).map(function(k){ return k.replace(/_/g,' '); }).join(', ') : 'No named pattern on the signal candle';
+    var long = p.direction === 'LONG', dt = $('plDir');
+    dt.textContent = long ? 'LONG ▲' : 'SHORT ▼'; dt.style.color = long ? 'var(--up)' : 'var(--down)';
+    var st = $('plStatus'); st.textContent = p.status || 'NEW';
+    var action = !p.status || p.status === 'WAITING FOR ENTRY'
+      ? 'Wait for price to reach the entry zone and close on the trade side. Do not chase. The setup expires after ' + p.expiry_bars + ' candles.'
+      : p.status === 'ENTRY CONFIRMED' || p.status === 'ACTIVE' || /^TP[12] HIT$/.test(p.status)
+        ? 'The trade is live. Manage it against the stop loss and take profit levels shown.'
+        : 'This signal is finished (' + p.status.toLowerCase() + '). The levels are kept for the record.';
+    $('plAction').textContent = action;
+    var rows = [['Entry', fmt(p.entry)], ['Entry zone', fmt(p.entry_lo) + ' to ' + fmt(p.entry_hi)],
+      ['Stop loss', fmt(p.sl) + ' (' + (Math.abs(p.entry-p.sl)/p.entry*100).toFixed(2) + '% away)'], ['Risk / reward (TP2)', '1 : ' + Number(p.rr).toFixed(2)],
+      ['TP1 / TP2 / TP3', fmt(p.tp1)+' / '+fmt(p.tp2)+' / '+fmt(p.tp3)],
+      ['Position size', fmt(p.qty) + ' units' + (p.notional ? ' (about ' + fmt(p.notional,0) + ')' : '')],
+      ['Risk on this trade', fmt(p.risk_amount,2)], ['Expected hold', p.hold_bars + ' candles'],
+      ['Model probability', pct(p.probability) + (p.threshold ? ' (threshold ' + pct(p.threshold) + ')' : '')], ['Score', Number(p.score).toFixed(0) + ' / 100']];
+    $('plGrid').innerHTML = rows.map(function(r){ return '<div><span class="label" style="text-transform:none;letter-spacing:0">'+esc(r[0])+'</span><b class="num">'+esc(r[1])+'</b></div>'; }).join('');
+    $('plNote').textContent = 'Size is calculated from the capital and risk per trade configured on the server. Model ' + p.model_id + '.';
+    renderInsight(p);
+    try {
+      var c = await api('/api/candles?symbol=' + encodeURIComponent(p.symbol) + '&tf=' + encodeURIComponent(p.tf) + '&limit=120');
+      $('chartHost').innerHTML = drawChart(c.candles, p);
+    } catch(e){ $('chartHost').innerHTML = '<div class="empty"><span class="muted">Could not load candles.</span></div>'; }
+  }
+
+  function renderInsight(p){
+    var ev = p.evidence || {}, comps = Object.entries(p.components || {}).sort(function(a,b){ return b[1]-a[1]; });
+    var nb = ev.neighbours || {}, d = p.direction === 'LONG' ? 'long' : 'short', mk = ev.market || {};
+    var why = [];
+    if (comps.length) why.push('Strongest scoring factors: ' + comps.slice(0,3).map(function(c){ return c[0].replace(/_/g,' ') + ' (' + Math.round(c[1]*100) + '%)'; }).join(', ') + '.');
+    if (nb.k) why.push(nb.k + ' similar past market states were found; ' + pct(nb[d+'_success']) + ' of them reached the target before the stop, against ' + pct(ev.base_rate) + ' for entering on every bar.');
+    why.push('The model estimates ' + pct(p.probability) + (p.threshold ? ', above its validated threshold of ' + pct(p.threshold) : '') + '. This is a calibrated estimate from past data, not a guarantee.');
+    if (mk.adx != null) why.push('Trend strength (ADX) is ' + mk.adx.toFixed(0) + ', relative volume ' + (mk.rel_vol||0).toFixed(1) + 'x, volatility ' + (mk.atr_ratio||0).toFixed(2) + 'x its recent average.');
+    var levels = (ev.trade_notes || []).map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('') ;
+    var inval = (p.invalidation || []).map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('');
+    $('insight').hidden = false;
+    $('iT').textContent = 'Why ' + p.symbol + '?';
+    $('insightBody').innerHTML =
+      '<div class="block"><span class="label">Why it was selected</span><ul>' + why.map(function(w){ return '<li>'+esc(w)+'</li>'; }).join('') + '</ul></div>' +
+      (levels ? '<div class="block"><span class="label">How the levels were set</span><ul>'+levels+'</ul></div>' : '') +
+      (inval ? '<div class="block"><span class="label">What cancels the setup</span><ul>'+inval+'</ul></div>' : '');
+  }
+
+  /* ---------- sections ---------- */
+  function renderOpps(rep, signalsExist){
+    var opps = rep.opportunities || [];
+    $('kOpps').textContent = opps.length;
+    $('kOppsNote').textContent = rep.message || '';
+    $('scanTime').textContent = rep.at ? 'Last scan ' + when(rep.at) : '';
+    var html = '';
+    if (opps.length){
+      html += '<div class="scroll"><div class="tbl"><div class="cols thead"><span>Pair</span><span>Score</span><span>Probability</span><span>Entry</span><span>Stop loss</span><span>TP1 / TP2 / TP3</span><span>R:R</span><span>TF</span></div>';
+      opps.forEach(function(o, i){
+        var long = o.direction === 'LONG', sel = state.selected && state.selected.kind === 'opp' && state.selected.key === o.symbol + o.direction;
+        html += '<button type="button" class="cols row num" data-i="'+i+'" aria-pressed="'+!!sel+'">' +
+          '<span><b>'+esc(o.symbol)+'</b><br><span class="small '+(long?'long':'short')+'">'+(long?'LONG ▲':'SHORT ▼')+'</span></span>' +
+          '<span class="score">'+Math.round(o.score)+'</span><span><b>'+pct(o.probability)+'</b></span>' +
+          '<span>'+esc(fmt(o.entry))+'</span><span>'+esc(fmt(o.sl))+'</span><span class="small">'+esc(fmt(o.tp1))+' / '+esc(fmt(o.tp2))+' / '+esc(fmt(o.tp3))+'</span>' +
+          '<span><b>1 : '+Number(o.rr).toFixed(2)+'</b></span><span>'+esc(o.tf)+'</span></button>';
+      });
+      html += '</div></div><div class="muted small">Probability is a calibrated model estimate of reaching the target before the stop within the prediction horizon. It is not a guaranteed win rate.</div>';
+    } else {
+      html += '<div class="empty"><strong>No qualified trading opportunities right now</strong><span class="muted">'+
+        (rep.at ? 'The scanner checked every monitored pair and none passed the quality and risk gates. Signals are never generated just to fill this page.' : 'No scan has finished yet. The first scan runs after history is downloaded and models are trained.')+'</span></div>';
+    }
+    var rej = rep.rejected || {}, syms = Object.keys(rej);
+    if (syms.length){
+      html += '<details><summary>Why other pairs were not shown ('+syms.length+')</summary><ul>' + syms.map(function(s){ return '<li><b>'+esc(s)+'</b>: '+esc((rej[s]||[]).join('; '))+'</li>'; }).join('') + '</ul></details>';
+    }
+    $('oppBody').innerHTML = html;
+    $('oppBody').querySelectorAll('button.row').forEach(function(b){
+      b.addEventListener('click', function(){
+        var o = opps[+b.dataset.i];
+        state.selected = {kind:'opp', key:o.symbol+o.direction, plan:planFromOpp(o)};
+        renderOpps(rep); showPlan(state.selected.plan);
+      });
+    });
+  }
+
+  function renderMarket(m){
+    if (!m || !m.pairs){ $('kCond').textContent = 'Waiting for data'; $('kCondNote').textContent = 'No candles stored yet'; $('kBar').innerHTML=''; $('kBull').textContent='–'; $('kBear').textContent='–'; return; }
+    $('kCond').textContent = m.condition + ', volatility ' + m.volatility;
+    $('kCondNote').textContent = 'Median ADX ' + m.median_adx.toFixed(0) + ' across ' + m.pairs + ' pairs';
+    var b = m.bullish_pct;
+    $('kBar').innerHTML = '<div style="flex:'+b+' 1 0;background:var(--up)"></div><div style="flex:'+(100-b)+' 1 0;background:var(--down)"></div>';
+    $('kBull').textContent = 'Uptrend ' + b.toFixed(0) + '%'; $('kBear').textContent = 'Downtrend ' + (100-b).toFixed(0) + '%';
+  }
+
+  function renderPerformance(perf, signals){
+    var o = perf.overall || {};
+    var items = [['Signals', o.signals||0], ['Trades', o.trades||0], ['Win rate', o.trades ? pct(o.win_rate,1) : '–'],
+      ['Avg R', o.trades ? o.avg_r.toFixed(2) : '–'], ['Profit factor', o.trades ? (isFinite(o.profit_factor) ? o.profit_factor.toFixed(2) : '∞') : '–'], ['Max drawdown', o.trades ? o.max_drawdown_r.toFixed(2)+'R' : '–']];
+    $('stats').innerHTML = items.map(function(i){ return '<div><span class="label">'+i[0]+'</span><b class="num">'+esc(i[1])+'</b></div>'; }).join('');
+    var rowsById = {}; (perf.signals || []).forEach(function(r){ rowsById[r.id] = r; });
+    var html = '<div class="hcols hhead"><span>Pair</span><span>Side</span><span>TF</span><span>Status</span><span>Score</span><span>Opened</span><span>Result</span></div>';
+    if (!signals.length) html += '<div class="muted small" style="padding:14px 4px">No signals have been generated yet.</div>';
+    signals.forEach(function(s, i){
+      var r = rowsById[s.id], res = r && r.state === 'closed' ? (r.r_net >= 0 ? '+' : '') + r.r_net.toFixed(2) + 'R' : r && r.state === 'no_entry' ? 'no entry' : 'open';
+      var cls = r && r.state === 'closed' ? (r.r_net >= 0 ? 'long' : 'short') : 'muted';
+      html += '<button type="button" class="hcols hrow num" data-i="'+i+'"><b>'+esc(s.symbol)+'</b><span class="'+(s.direction==='LONG'?'long':'short')+'">'+esc(s.direction)+'</span><span>'+esc(s.tf)+'</span><span class="small">'+esc(s.state.status)+'</span><span>'+Math.round(s.score)+'</span><span class="muted small">'+esc(when(s.created_at))+'</span><b class="'+cls+'">'+esc(res)+'</b></button>';
+    });
+    $('hist').innerHTML = html;
+    $('hist').querySelectorAll('button.hrow').forEach(function(b){
+      b.addEventListener('click', function(){
+        var s = signals[+b.dataset.i];
+        state.selected = {kind:'sig', key:s.id, plan:planFromSignal(s)};
+        showPlan(state.selected.plan); $('analysis').scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+    var pats = Object.entries(perf.by_pattern || {}).filter(function(e){ return e[1].trades; }).sort(function(a,b){ return b[1].trades - a[1].trades; });
+    $('patterns').innerHTML = pats.length ? pats.map(function(e){
+      return '<div class="pat"><div class="t"><span>'+esc(e[0].replace(/_/g,' '))+'</span><b class="num">'+pct(e[1].win_rate)+'</b></div><div class="meter"><i style="width:'+Math.round(e[1].win_rate*100)+'%"></i></div><span class="muted small">'+e[1].trades+' closed live trade'+(e[1].trades===1?'':'s')+'</span></div>';
+    }).join('') : '<div class="muted small">Pattern statistics appear after signals have closed. Historical pattern research is stored separately in the knowledge base.</div>';
+  }
+
+  function renderModels(models){
+    var el = $('models');
+    if (!models.length){ el.innerHTML = '<div class="muted small">No models have been trained yet.</div>'; return; }
+    el.innerHTML = '<div class="mrow label"><span>Pair</span><span>Long</span><span>Short</span></div>' + models.map(function(m){
+      function cell(k){ var u = m.usable[k], t = (m.test[k]||{}); return u ? '<span class="long">Edge</span><span class="small muted"> AUC '+(t.auc_test||0).toFixed(2)+'</span>' : '<span class="muted">No edge</span>'; }
+      return '<div class="mrow"><span><b>'+esc(m.symbol)+'</b> <span class="muted small">'+esc(m.tf)+'</span></span><span>'+cell('long')+'</span><span>'+cell('short')+'</span></div>';
+    }).join('');
+  }
+
+  function renderStatus(ov){
+    var w = ov.worker || {}, dot = $('workerStatus');
+    var ok = w.cycles > 0 && !w.last_error;
+    dot.innerHTML = '<span class="dot '+(w.last_error ? 'bad' : ok ? 'ok' : 'wait')+'"></span>' + (w.cycles > 0 ? 'Worker ran ' + ago(w.last_cycle_seconds_ago) : 'First cycle running…');
+    $('exchangePill').textContent = (ov.exchange || '').toUpperCase();
+    $('kPairs').textContent = ov.monitored_pairs; $('kPairsNote').textContent = (ov.timeframes || []).join(', ') + ' timeframe' + ((ov.timeframes||[]).length === 1 ? '' : 's');
+    $('kSigs').textContent = ov.open_signals; $('kSigsNote').textContent = ov.open_signals ? 'Waiting for entry or in progress' : 'None open';
+    $('kModels').textContent = ov.models_with_edge + ' / ' + ov.models;
+    $('kModelsNote').textContent = ov.models === 0 ? 'Models train after enough history is downloaded' : ov.models_with_edge === 0 ? 'None yet, so no signals can be generated' : 'Only these can raise signals';
+    var b = [];
+    if (w.last_error) b.push('<div class="banner bad"><b>The last cycle failed</b><span class="small">'+esc(w.last_error)+'</span></div>');
+    var lc = ov.last_cycle || {};
+    Object.keys(lc).forEach(function(tf){
+      var se = lc[tf].sync_errors || {}, mn = lc[tf].model_notes || {};
+      var se_keys = Object.keys(se), mn_keys = Object.keys(mn);
+      if (se_keys.length) b.push('<div class="banner bad"><b>Market data could not be downloaded ('+esc(tf)+')</b>' + se_keys.slice(0,4).map(function(k){ return '<span class="small">'+esc(k)+': '+esc(se[k])+'</span>'; }).join('') + '</div>');
+      if (mn_keys.length) b.push('<div class="banner"><b>Models waiting for history ('+esc(tf)+')</b>' + mn_keys.slice(0,4).map(function(k){ return '<span class="small">'+esc(k)+': '+esc(mn[k])+'</span>'; }).join('') + '</div>');
+    });
+    $('banners').innerHTML = b.join('');
+  }
+
+  /* ---------- loading ---------- */
+  var loading = false;
+  async function load(){
+    if (loading) return; loading = true;
+    try {
+      var ov = await api('/api/overview');
+      state.overview = ov; state.tfs = ov.timeframes || [];
+      var sel = $('tfSelect');
+      if (!sel.options.length){ state.tfs.forEach(function(t){ sel.add(new Option(t, t)); }); state.tf = state.tfs[0]; }
+      renderStatus(ov);
+      var res = await Promise.all([api('/api/opportunities?tf='+state.tf), api('/api/market?tf='+state.tf), api('/api/signals?limit=50'), api('/api/performance'), api('/api/models')]);
+      renderMarket(res[1]);
+      renderOpps(res[0]);
+      renderPerformance(res[3], res[2].signals);
+      renderModels(res[4].models);
+      if (!state.selected){
+        if (res[0].opportunities && res[0].opportunities.length){ var o = res[0].opportunities[0]; state.selected = {kind:'opp', key:o.symbol+o.direction, plan:o}; renderOpps(res[0]); showPlan(o); }
+        else if (res[2].signals.length){ var s = res[2].signals[0]; state.selected = {kind:'sig', key:s.id, plan:planFromSignal(s)}; showPlan(state.selected.plan); }
+      }
+    } catch(e){
+      if (e.auth){ $('workerStatus').innerHTML = '<span class="dot bad"></span>Access key required'; openKey(); }
+      else { $('workerStatus').innerHTML = '<span class="dot bad"></span>Cannot reach the server'; }
+    } finally { loading = false; }
+  }
+
+  function openKey(){ var d = $('keyDlg'); if (!d.open) { $('keyInput').value = ''; d.showModal(); } }
+  $('keyBtn').addEventListener('click', openKey);
+  $('keyCancel').addEventListener('click', function(){ $('keyDlg').close(); });
+  $('keyForm').addEventListener('submit', function(){ setKey($('keyInput').value.trim()); state.selected = null; load(); });
+  $('tfSelect').addEventListener('change', function(){ state.tf = this.value; state.selected = null; load(); });
+
+  load();
+  setInterval(function(){ if (!document.hidden) load(); }, REFRESH_MS);
+})();
+</script>
+</body>
+</html>

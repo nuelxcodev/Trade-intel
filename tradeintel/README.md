@@ -77,3 +77,14 @@ First boot downloads history, trains a model per pair (needs 1,500 candles), the
 "No qualified trading opportunities" until a model shows an edge on its untouched test window.
 Endpoints: `/health`, `/api/overview`, `/api/opportunities?tf=1h`, `/api/signals`, `/api/signals/<id>`,
 `/api/performance`, `/api/models`, `/api/notifications?user=default`, `POST /api/prefs/<user>`.
+
+## Dashboard
+
+The service serves the dashboard at `/` (file: `tradeintel/web/index.html`, no build step). It reads the
+live API, refreshes every 30 seconds, and asks for the access key if `TI_API_KEY` is set. It shows market
+breadth and regime, ranked opportunities (or the explicit "none" message with the reason each pair was
+rejected), an interactive-free candlestick chart with EMAs and entry, stop loss and take profit levels,
+the trade plan, signal history with net R results, pattern performance, model status, and
+evidence-based explanations. Banners surface sync failures (for example a region block) and models
+still waiting for history. Explanations are generated from the engines' stored evidence, not by a
+language model.

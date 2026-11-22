@@ -154,3 +154,41 @@ def test_env_config(monkeypatch):
     assert env_list("TI_SYMBOLS", "x") == ["BTCUSDT", "ETHUSDT"]
     with pytest.raises(ValueError):
         validate_timeframes(["1h", "3h"])
+
+
+def test_candles_endpoint_returns_emas_and_validates_input(running):
+    _, _, base, _ = running
+    code, out = get(base + "/api/candles?symbol=AAAUSDT&tf=1h&limit=120")
+    assert code == 200 and len(out["candles"]) == 120
+    c = out["candles"][-1]
+    assert set(c) == {"t", "o", "h", "l", "c", "v", "ema20", "ema50"} and c["ema50"] is not None
+    assert c["l"] <= min(c["o"], c["c"]) and c["h"] >= max(c["o"], c["c"])
+    assert get(base + "/api/candles?symbol=BBBUSDT&tf=1h")[1]["candles"] == []        # known pair, no data yet
+    assert get(base + "/api/candles?symbol=EVIL&tf=1h")[0] == 400                    # not a monitored pair
+    assert get(base + "/api/candles?symbol=AAAUSDT&tf=7h")[0] == 400
+
+
+def test_market_summary(running):
+    _, _, base, _ = running
+    code, m = get(base + "/api/market?tf=1h")
+    assert code == 200 and m["pairs"] == 1                                          # only AAAUSDT has candles
+    assert 0 <= m["bullish_pct"] <= 100 and m["condition"] in ("Trending", "Range-bound")
+    assert m["volatility"] in ("rising", "falling", "steady")
+    assert get(base + "/api/market?tf=4h")[1]["pairs"] == 0
+
+
+def test_dashboard_page_is_served_without_a_key(running):
+    _, _, base, _ = running
+    with urllib.request.urlopen(base + "/") as r:
+        html = r.read().decode()
+        assert r.status == 200 and "text/html" in r.headers["Content-Type"]
+    assert "Trading Intelligence" in html and "/api/overview" in html and "Poppins" in html
+
+
+def test_overview_exposes_pipeline_issues_for_the_ui(running):
+    _, _, base, _ = running
+    from tradeintel.service import STATE
+    STATE["last_summary"] = {"1h": {"sync_errors": {"AAAUSDT": "451: blocked"}, "model_notes": {}}}
+    ov = get(base + "/api/overview")[1]
+    assert ov["last_cycle"]["1h"]["sync_errors"]["AAAUSDT"] == "451: blocked"
+    STATE["last_summary"] = None

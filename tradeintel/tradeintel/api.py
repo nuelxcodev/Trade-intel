@@ -26,11 +26,15 @@ from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
+from .indicators import add_indicators
 from .notify import Notifier, Prefs
 from .performance import build_report
 from .service import STATE, model_dir_for
 from .signals import SignalStore
 from .store import CandleStore
+from .timeframes import TF_MS, tf_ms
+
+WEB_DIR = Path(__file__).parent / "web"
 
 
 def clean(o):
@@ -87,6 +91,17 @@ def make_handler(cfg: Config):
             q = {k: v[0] for k, v in parse_qs(url.query).items()}
             if url.path == "/health":
                 return self._send(200, health())
+            if url.path in ("/", "/index.html"):
+                page = WEB_DIR / "index.html"
+                if not page.exists():
+                    return self._send(404, {"error": "dashboard not installed"})
+                body = page.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                return self.wfile.write(body)
             if not url.path.startswith("/api/"):
                 return self._send(404, {"error": "not found"})
             if not self._authorised():
@@ -151,7 +166,22 @@ def route_get(cfg: Config, store: CandleStore, path: str, q: dict) -> tuple[int,
         return 200, {"exchange": cfg.exchange, "symbols": cfg.symbols, "timeframes": cfg.tfs,
                      "monitored_pairs": len(cfg.symbols), "open_signals": len(ss.open_signals()),
                      "models": len(models), "models_with_edge": sum(any(m["usable"].values()) for m in models),
-                     "worker": health()}
+                     "worker": health(), "last_cycle": STATE.get("last_summary")}
+    if path == "/api/candles":
+        sym, tf = q.get("symbol"), q.get("tf") or (cfg.tfs[0] if cfg.tfs else "1h")
+        if sym not in cfg.symbols or tf not in TF_MS:
+            return 400, {"error": "unknown symbol or timeframe"}
+        limit = max(10, min(int(q.get("limit", 150)), 500))
+        b = store.bounds(cfg.exchange, sym, tf)
+        if b is None:
+            return 200, {"symbol": sym, "tf": tf, "candles": []}
+        raw = store.load(cfg.exchange, sym, tf, start_ms=b[1] - (limit + 60) * tf_ms(tf))
+        df = add_indicators(raw).tail(limit)
+        return 200, {"symbol": sym, "tf": tf, "candles": [
+            {"t": int(r.open_time), "o": r.open, "h": r.high, "l": r.low, "c": r.close, "v": r.volume,
+             "ema20": r.ema20, "ema50": r.ema50} for r in df.itertuples()]}
+    if path == "/api/market":
+        return 200, market_summary(cfg, store, q.get("tf") or (cfg.tfs[0] if cfg.tfs else "1h"))
     if path == "/api/opportunities":
         tf = q.get("tf") or (cfg.tfs[0] if cfg.tfs else "1h")
         row = store.conn.execute("SELECT report FROM scan_results WHERE tf=?", (tf,)).fetchone() \
@@ -179,6 +209,34 @@ def route_get(cfg: Config, store: CandleStore, path: str, q: dict) -> tuple[int,
         user = q.get("user", "default")
         return 200, {"user": user, "notifications": Notifier(store, ss, []).inbox(user, q.get("unread") == "1")}
     return 404, {"error": "not found"}
+
+
+def market_summary(cfg: Config, store: CandleStore, tf: str) -> dict:
+    """Breadth and regime across the monitored pairs, computed from stored candles only."""
+    if tf not in TF_MS:
+        return {"tf": tf, "pairs": 0}
+    step, rows = tf_ms(tf), []
+    for sym in cfg.symbols:
+        b = store.bounds(cfg.exchange, sym, tf)
+        if b is None:
+            continue
+        df = add_indicators(store.load(cfg.exchange, sym, tf, start_ms=b[1] - 160 * step))
+        if len(df) < 60 or df["ema50"].iloc[-1] != df["ema50"].iloc[-1]:
+            continue
+        r = df.iloc[-1]
+        ratio = df["atr14"].iloc[-1] / df["atr14"].rolling(50).mean().shift(1).iloc[-1]
+        back = max(1, int(86_400_000 // step))
+        rows.append({"symbol": sym, "bullish": bool(r.ema20 > r.ema50), "adx": float(r.adx14),
+                     "atr_ratio": float(ratio), "rsi": float(r.rsi14),
+                     "change_24h": float(r.close / df["close"].iloc[-1 - back] - 1) if len(df) > back else None})
+    if not rows:
+        return {"tf": tf, "pairs": 0}
+    adx = float(np.median([x["adx"] for x in rows]))
+    vol = float(np.median([x["atr_ratio"] for x in rows]))
+    return {"tf": tf, "pairs": len(rows), "bullish_pct": 100.0 * sum(x["bullish"] for x in rows) / len(rows),
+            "median_adx": adx, "median_atr_ratio": vol,
+            "condition": "Trending" if adx >= 25 else "Range-bound",
+            "volatility": "rising" if vol > 1.15 else "falling" if vol < 0.85 else "steady", "pairs_detail": rows}
 
 
 def list_models(cfg: Config) -> list[dict]:
